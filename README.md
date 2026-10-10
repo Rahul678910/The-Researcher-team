@@ -1,34 +1,64 @@
-# The Researcher — Automated Verification Runner
+<div align="center">
 
-A standalone Python verification runner for **The Researcher** HTTP API. It exercises research-brief generation, request validation, error handling, service health, web UI delivery, concurrent requests, and output differentiation.
+# ⚡ The Researcher
+### Automated API Verification Runner
 
-The runner uses Python's standard library for its HTTP client and test orchestration, so **the verification script itself has no third-party pip dependencies**. The application server it tests must still be available in the project.
+**Put your research API through its paces.**  
+Validate generated briefs, challenge error handling, and check essential service behavior with one Python command.
 
-## Features
+<p>
+  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python 3.9+" />
+  <img src="https://img.shields.io/badge/Dependencies-Standard%20Library-2E8B57" alt="Standard library only" />
+  <img src="https://img.shields.io/badge/Checks-19-7C3AED" alt="19 checks" />
+  <img src="https://img.shields.io/badge/Output-Terminal%20%7C%20JSON-0F766E" alt="Terminal and JSON output" />
+</p>
 
-- **19 automated checks** organized into four tiers.
-- Validates generated research briefs against a required JSON schema.
-- Tests expected HTTP error responses for invalid requests and routes.
-- Checks health and root web UI endpoints.
-- Exercises five simultaneous research requests.
-- Supports readable terminal output and machine-readable JSON output.
-- Can test an already-running server or attempt to start the project server locally.
-- Returns an exit code suitable for scripts and CI workflows.
+[Quick Start](#-quick-start) · [Test Matrix](#-the-four-test-tiers) · [CLI Options](#-command-line-options) · [API Contract](#-expected-api-contract) · [Troubleshooting](#-troubleshooting)
 
-## Requirements
+</div>
 
-- Python **3.9 or newer**.
-- The corresponding **The Researcher** application source code, including its server module.
-- For local auto-start, the server must expose one of the supported entry points in `the_researcher.server`:
-  - `create_server(host, port)`
-  - `ResearcherServer(host, port)`
-  - `run_server(host=..., port=...)`
+---
 
-No third-party packages are imported by `verify.py`.
+## 🧭 What is it?
 
-## Project layout
+**The Researcher Verification Runner** is a lightweight, standalone test harness for The Researcher HTTP API. It sends representative requests to the service and checks whether responses, error codes, and generated research briefs match the expectations encoded in the test suite.
 
-The script adds both the project root and its `src/` directory to Python's import path. A typical layout is:
+Run it against an existing local server, point it at another test instance, or let it attempt to start the project server locally.
+
+### Why use it?
+
+- **No test-framework setup:** the runner uses Python's standard library.
+- **Schema-aware checks:** verifies required fields and key data types in research briefs.
+- **Negative-path coverage:** tests malformed requests and expected HTTP errors.
+- **Concurrency smoke test:** sends five research requests at the same time.
+- **Automation-friendly:** returns a non-zero exit code when verification fails and can emit JSON results.
+
+> [!NOTE]
+> The high-concurrency and low-latency cases verify that the API accepts demanding task descriptions and returns schema-valid briefs. They do **not** benchmark 50,000 real connections or prove a sub-5-ms response time.
+
+## ✨ At a glance
+
+| | |
+|---|---|
+| **19 checks** | Four tiers, from domain synthesis to end-to-end smoke checks |
+| **4 synthesis domains** | Frontend, backend, data pipeline, and DevOps/cloud |
+| **Standard library** | No third-party pip packages are imported by `verify.py` |
+| **Two report formats** | Human-readable terminal table or machine-readable JSON |
+| **Python** | 3.9+ |
+
+## 🚀 Quick start
+
+### 1. Check your Python version
+
+```bash
+python --version
+```
+
+Python **3.9 or newer** is required.
+
+### 2. Place the runner in your project
+
+A typical project layout looks like this:
 
 ```text
 your-project/
@@ -39,119 +69,88 @@ your-project/
         └── server.py
 ```
 
-Your actual project may contain additional application files. The important requirement is that the server module and its API routes match the endpoints expected by the tests.
+The runner adds the project root and `src/` to Python's import path. Your application may have additional files; the important part is that its server module and API routes match the expected contract.
 
-## Quick start
-
-### 1. Open a terminal in the project root
-
-```bash
-cd your-project
-```
-
-### 2. Run the verification suite
+### 3. Run the suite
 
 ```bash
 python verify.py
 ```
 
-When no URL is supplied, the runner first checks `http://127.0.0.1:8000`. If a healthy server is not found there, it attempts to start an in-process server on a free local port.
+By default, the runner checks `http://127.0.0.1:8000` for a healthy service. If one is not available, it attempts to start an in-process server on a free local port.
 
-### 3. Test a server that is already running
+### 4. Verify a running server
 
 ```bash
 python verify.py --url http://127.0.0.1:8000
 ```
 
-Replace the URL with the base URL of your test instance. The server should expose the routes described below.
+Use `--url` to specify the base URL of your test server.
 
-## Command-line options
+## 🧪 The four test tiers
 
-| Option | Description |
+| Tier | Focus | Checks | What it covers |
+|---|---|---:|---|
+| **1 — Domain synthesis** | Core functionality | 4 | Frontend, backend, data pipeline, and DevOps/cloud briefs; HTTP status, schema, and expected domain |
+| **2 — Error handling** | Invalid input | 8 | Missing/blank task, invalid field types, empty body, malformed JSON, method not allowed, and unknown route |
+| **3 — Demanding constraints** | Complex task descriptions | 3 | High-concurrency, ultra-low-latency, and offline-first requirements; response success and schema validity |
+| **4 — Service checks** | End-to-end smoke tests | 4 | Health endpoint, HTML UI delivery, five parallel requests, and distinct output domains |
+| | **Total** | **19** | |
+
+### Test ID map
+
+<details>
+<summary><strong>View all test IDs</strong></summary>
+
+| Tier | Test IDs |
 |---|---|
-| `--url URL` | Base URL of the HTTP server to test. If omitted, the runner checks localhost and may attempt to start the application server. |
-| `--port PORT` | Local port to check when `--url` is omitted. Defaults to `8000`. |
-| `--json` | Print a JSON report instead of the formatted terminal table. |
-| `--verbose`, `-v` | Accepted as a detailed-diagnostics option by the CLI. In the current implementation, this flag does not change the report output. |
-| `--help` | Display available command-line options. |
+| Tier 1 | `T1-FE-01`, `T1-BE-01`, `T1-DP-01`, `T1-DO-01` |
+| Tier 2 | `T2-ERR-01` through `T2-ERR-08` |
+| Tier 3 | `T3-CD-01` through `T3-CD-03` |
+| Tier 4 | `T4-E2E-01` through `T4-E2E-04` |
 
-Examples:
+</details>
+
+## 🎛️ Command-line options
+
+| Option | What it does |
+|---|---|
+| `--url URL` | Target server base URL. If omitted, checks localhost and may try to start the application server. |
+| `--port PORT` | Local port to check when `--url` is omitted. Default: `8000`. |
+| `--json` | Prints a machine-readable JSON report instead of the terminal table. |
+| `--verbose`, `-v` | Accepted by the CLI; currently does not change the amount of diagnostic output. |
+| `--help` | Displays command help. |
+
+### Handy commands
 
 ```bash
-# Default behavior
+# Run against the default local setup
 python verify.py
 
-# Check a local server on port 9000
+# Check a different local port
 python verify.py --port 9000
 
-# Check a specified server
+# Test a specific server
 python verify.py --url http://127.0.0.1:8000
 
-# Produce machine-readable results
+# Emit JSON for scripts or CI
 python verify.py --json
 
-# Show command help
+# See all available options
 python verify.py --help
 ```
 
-## Verification tiers
+## 🔌 Expected API contract
 
-### Tier 1 — Domain synthesis (4 tests)
+The runner expects the application to expose these routes:
 
-Checks that the API can generate a valid research brief for four task domains:
-
-- Frontend / UI
-- Backend / API
-- Data pipelines
-- DevOps / cloud
-
-Each test expects HTTP `200`, validates the returned brief's schema, and checks that the returned `domain` matches an accepted value for that test.
-
-### Tier 2 — Input validation and HTTP errors (8 tests)
-
-Checks that the API handles invalid requests appropriately:
-
-- Missing `task`
-- Empty or whitespace-only `task`
-- Invalid `task` type
-- Invalid `constraints` type
-- Empty request body
-- Malformed JSON
-- Unsupported HTTP method
-- Nonexistent route
-
-The tests expect `400` or `422` for invalid request payloads, `405` for a method not allowed, and `404` for a missing route.
-
-### Tier 3 — Demanding task constraints (3 tests)
-
-Submits research tasks describing:
-
-- High concurrency (50,000 open sockets)
-- Ultra-low latency (less than 5 ms at p99)
-- Offline-first progressive web application behavior
-
-These tests verify successful API responses and research-brief schema conformance. They **do not independently benchmark** 50,000 live connections, measure actual sub-5-ms latency, or validate a deployed offline-first application.
-
-### Tier 4 — Service and end-to-end behavior (4 tests)
-
-Checks:
-
-- `GET /api/health` returns HTTP `200` with a JSON object containing `status`.
-- `GET /` returns HTTP `200`, an HTML content type, and page content containing `The Researcher`.
-- Five research requests can be submitted concurrently and return valid briefs.
-- Two different research tasks produce different `domain` values.
-
-## Expected API contract
-
-The verification runner expects these endpoints:
-
-| Method | Endpoint | Expected behavior |
+| Method | Route | Expected behavior |
 |---|---|---|
-| `GET` | `/api/health` | Returns HTTP `200` and JSON containing a `status` field. |
-| `GET` | `/` | Returns HTTP `200` and HTML containing `The Researcher`. |
-| `POST` | `/api/research` | Accepts a JSON research task and returns a research brief. |
+| `GET` | `/api/health` | HTTP `200`; JSON object containing a `status` field |
+| `GET` | `/` | HTTP `200`; HTML content type and page text containing `The Researcher` |
+| `POST` | `/api/research` | Accepts a JSON research task and returns a research brief |
 
-A typical valid request used by the tests has this shape:
+Example request body:
 
 ```json
 {
@@ -163,99 +162,104 @@ A typical valid request used by the tests has this shape:
 }
 ```
 
-The brief validator expects these required fields:
+### Research brief validation
 
-- `task` — a non-empty string.
-- `domain` — a non-empty string.
-- `approach` — a non-empty string or list, with compatibility handling for `approaches`.
-- `libraries` — a non-empty list. Library entries must include explicit version-like information.
-- `documentation_links` — a non-empty list of HTTP or HTTPS URLs, with compatibility handling for `documentation`.
-- `pitfalls` — a non-empty list of descriptive strings or objects.
+The response validator expects the following fields:
 
-For object-style library entries, the validator checks `name` and `version`. For pitfalls, it looks for descriptive text such as `description`, `caveat`, `title`, or `mitigation`.
+| Field | Requirement |
+|---|---|
+| `task` | Non-empty string |
+| `domain` | Non-empty string |
+| `approach` | Non-empty string or list; legacy `approaches` is also supported |
+| `libraries` | Non-empty list; entries need version-like information |
+| `documentation_links` | Non-empty list of HTTP/HTTPS URLs; legacy `documentation` is also supported |
+| `pitfalls` | Non-empty list of descriptive strings or objects |
 
-## Output and exit codes
+For object-style library entries, the validator checks `name` and `version`. For pitfall objects, it looks for text in `description`, `caveat`, `title`, or `mitigation`.
 
-### Terminal report
+## 📊 Reading the results
 
-The default output is a table containing the tier, test ID, test name, duration, and pass/fail status. The summary includes the total, passed and failed tests, pass rate, and overall duration.
+### Terminal mode
 
-- Exit code `0`: every registered test passed.
-- Exit code `1`: one or more tests failed, or the runner could not start or reach the server.
+The default report shows each test's tier, ID, name, duration, and status, followed by a summary.
 
-ANSI colors are disabled when `NO_COLOR` is set or standard output is not a terminal.
+- **Exit code `0`** — all registered tests passed.
+- **Exit code `1`** — at least one test failed, or server startup/readiness failed.
 
-### JSON report
+ANSI colors are disabled when the `NO_COLOR` environment variable is set or standard output is not a terminal.
 
-Run:
+### JSON mode
 
 ```bash
 python verify.py --json
 ```
 
-The JSON output includes:
+The report includes `status`, `exit_code`, `total`, `passed`, `failed`, `schema_conformance_rate`, `duration_ms`, `target_url`, and per-test `results`. Startup errors are emitted as a separate JSON error object.
 
-- `status`
-- `exit_code`
-- `total`, `passed`, and `failed`
-- `schema_conformance_rate`
-- `duration_ms`
-- `target_url`
-- `results`, with each test's tier, ID, name, status, duration, and detail
+## 🛠️ Troubleshooting
 
-This output is useful for automation and CI systems. Note that startup errors are emitted as a separate JSON object with an error status and exit code.
+<details>
+<summary><strong>Server won't start</strong></summary>
 
-## Test IDs
+- Confirm the application source is present and importable from the project root or `src/`.
+- Check that `the_researcher.server` exposes one of the supported entry points: `create_server(host, port)`, `ResearcherServer(host, port)`, or `run_server(host=..., port=...)`.
+- Read the exception printed by the runner for the underlying startup problem.
 
-| Tier | Test IDs |
-|---|---|
-| Tier 1 | `T1-FE-01`, `T1-BE-01`, `T1-DP-01`, `T1-DO-01` |
-| Tier 2 | `T2-ERR-01` through `T2-ERR-08` |
-| Tier 3 | `T3-CD-01` through `T3-CD-03` |
-| Tier 4 | `T4-E2E-01` through `T4-E2E-04` |
+</details>
 
-## Troubleshooting
+<details>
+<summary><strong>Server readiness times out</strong></summary>
 
-**The runner cannot launch the server**
-
-- Confirm that the application source is present and importable from the project root or `src/`.
-- Confirm that `the_researcher.server` provides one of the supported server entry points.
-- Check the exception printed by the runner for the underlying import or startup problem.
-
-**The server does not become ready**
-
-- Confirm the server starts successfully and serves `GET /api/health`.
+- Confirm `GET /api/health` returns HTTP `200`.
 - The auto-start readiness check waits up to five seconds.
-- If the application is already running, pass its URL with `--url`.
+- If the app is already running, pass its URL with `--url`.
 
-**A test fails with a schema error**
+</details>
 
-- Inspect the failed test's detail in the terminal report or JSON output.
-- Confirm all required brief fields are present and non-empty.
-- Ensure libraries include version-like information and documentation links use `http://` or `https://`.
+<details>
+<summary><strong>A schema check fails</strong></summary>
 
-**A request returns an unexpected status**
+- Inspect the failing test's detail in the terminal output or JSON report.
+- Check all required fields and non-empty values.
+- Ensure library entries include version-like information and documentation links use `http://` or `https://`.
 
-- Confirm the application implements `POST /api/research` and the expected validation behavior.
-- Check whether middleware, authentication, or other local configuration changes the API response.
+</details>
 
-## Scope and limitations
+<details>
+<summary><strong>An endpoint returns an unexpected status</strong></summary>
 
-- This is an HTTP-level verification runner, not a full load-testing or performance-profiling framework.
-- The high-concurrency and latency tests submit descriptive tasks; they do not generate the stated workload against a live service.
-- The suite checks the presence and shape of documentation links, not whether those links are reachable.
-- The brief validator supports a few legacy field aliases (`documentation` and `approaches`).
-- The `--verbose` option is parsed, but it currently does not enable additional diagnostic output.
-- The script attempts to shut down an auto-started server object when that object supports `shutdown()` and `server_close()`.
+Confirm the route, HTTP method, request validation, and any middleware or authentication settings match the expected API contract.
 
-## Contributing
+</details>
+
+## 🔐 Security & scope
+
+- Run tests against a development or test environment you own or are authorized to assess.
+- The runner uses `127.0.0.1` for local server discovery and auto-start by default; this is a loopback address, not your public IP.
+- The suite checks that documentation links look like HTTP/HTTPS URLs; it does not verify that the links are reachable.
+- This is an HTTP verification and smoke-testing script, not a full load-testing, penetration-testing, or performance-profiling framework.
+- The script attempts to shut down an auto-started server object if it provides `shutdown()` and `server_close()`.
+
+For vulnerability reporting guidance, see [`SECURITY.md`](SECURITY.md) if your repository includes it.
+
+## 🤝 Contributing
+
+Contributions and focused improvements are welcome.
 
 1. Create a branch for your change.
-2. Keep tests focused and give new checks a unique test ID.
+2. Give new checks unique test IDs and clear failure messages.
 3. Run `python verify.py` against the intended application server.
-4. Check `python verify.py --json` if you need to inspect or process structured results.
+4. Check `python verify.py --json` when validating structured output.
 5. Include relevant test results in your pull request.
 
-## License
+## 📄 License
 
-No license information is specified in `verify.py`. Add a `LICENSE` file and update this section to state the project's actual license before publishing or redistributing it.
+No license is specified in the supplied Python file. Add a `LICENSE` file and update this section once you choose the terms under which others may use, modify, or redistribute the project.
+
+---
+
+<div align="center">
+
+**Built to make API behavior easier to verify — one test run at a time.**
+
+</div>
