@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Researcher — Live Dashboard</title>
+  <style>
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #070d1a;
+      --panel:       #0d1526;
+      --card:        #111d33;
+      --border:      #1e3a5f;
+      --accent:      #38bdf8;
+      --accent2:     #818cf8;
+      --green:       #34d399;
+      --yellow:      #fbbf24;
+      --red:         #f87171;
+      --text:        #e2e8f0;
+      --muted:       #64748b;
+      --glow:        rgba(56, 189, 248, 0.18);
+      --font:        'Inter', system-ui, -apple-system, sans-serif;
+      --mono:        'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    html { font-size: 14px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* ========== HEADER ========== */
+    header {
+      background: linear-gradient(135deg, #0d1526 0%, #111d33 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .logo-text h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .logo-text span {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .server-indicator {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    #server-url-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.7rem;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      width: 200px;
+    }
+
+    /* ========== LAYOUT ========== */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 0;
+      height: calc(100vh - 65px);
+      overflow: hidden;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    /* ========== MAIN ========== */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 1.25rem;
+      gap: 1rem;
+    }
+
+    /* ========== ACTIVITY LOG ========== */
+    .log-panel {
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ========== CARDS ========== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: 0.5rem;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .card-title .icon { font-size: 0.9rem; }
+
+    .card-body { padding: 1rem; }
+
+    /* ========== STAT TILES ========== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+
+    .stat-tile {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ========== DOMAIN BADGES ========== */
+    .domain-list { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; }
+
+    .domain-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .domain-badge:hover {
+      border-color: var(--accent);
+      background: rgba(56,189,248,0.05);
+    }
+
+    .domain-badge.active {
+      border-color: var(--accent);
+      background: rgba(56,189,248,0.1);
+    }
+
+    .domain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .d-frontend    { background: #818cf8; }
+    .d-backend     { background: #34d399; }
+    .d-data_pipeline { background: #fbbf24; }
+    .d-devops_cloud { background: #f87171; }
+    .d-ai_ml       { background: #c084fc; }
+
+    /* ========== QUERY FORM ========== */
+    .query-section {
+      flex: 0 0 auto;
+    }
+
+    .form-row { display: flex; gap: 0.75rem; }
+
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+
+    label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    textarea, input[type="text"] {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
+    }
+
+    .btn {
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: var(--font);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
+    }
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+
+    /* ========== PROGRESS BAR ========== */
+    .progress-wrap {
+      height: 3px;
+      background: var(--panel);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 999px;
+    }
+
+    /* ========== BRIEF VIEWER ========== */
+    .brief-section {
+      flex: 1 1 auto;
+      overflow-y: auto;
+    }
+
+    .brief-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .brief-empty .big-icon { font-size: 3rem; opacity: 0.3; }
+
+    .brief-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .brief-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .brief-card-full { grid-column: 1 / -1; }
+
+    .brief-card h3 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .domain-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(56,189,248,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56,189,248,0.3);
+      margin-bottom: 0.75rem;
+    }
+
+    .approach-summary {
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .step-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+    .step-list li {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 20px; height: 20px;
+      background: rgba(56,189,248,0.15);
+      color: var(--accent);
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .lib-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .lib-item:last-child { border-bottom: none; }
+
+    .lib-name {
+      font-family: var(--mono);
+      color: var(--accent2);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .lib-ver {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      background: rgba(129,140,248,0.15);
+      color: var(--accent2);
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .lib-desc { color: var(--muted); flex: 1; }
+
+    .doc-link {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      word-break: break-all;
+    }
+    .doc-link:hover {
+      background: rgba(56,189,248,0.08);
+      border-color: rgba(56,189,248,0.3);
+    }
+
+    .pitfall-item {
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      background: rgba(248,113,113,0.07);
+      border-left: 3px solid var(--red);
+      margin-bottom: 0.5rem;
+    }
+    .pitfall-item .risk {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--red);
+      margin-bottom: 0.25rem;
+    }
+    .pitfall-item .mitigation {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ========== LOG PANEL ========== */
+    .log-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .log-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-family: var(--mono);
+    }
+
+    .log-entry {
+      font-size: 0.73rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      border-left: 2px solid transparent;
+      line-height: 1.4;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-info    { border-color: var(--accent);  color: var(--text);   background: rgba(56,189,248,0.05); }
+    .log-success { border-color: var(--green);   color: var(--green);  background: rgba(52,211,153,0.05); }
+    .log-error   { border-color: var(--red);     color: var(--red);    background: rgba(248,113,113,0.05); }
+    .log-warn    { border-color: var(--yellow);  color: var(--yellow); background: rgba(251,191,36,0.05); }
+    .log-muted   { border-color: var(--border);  color: var(--muted); }
+
+    .log-time { opacity: 0.5; font-size: 0.65rem; }
+
+    /* ========== PRESET CHIPS ========== */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    .preset-chip {
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-chip:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(129,140,248,0.08);
+    }
+
+    /* ========== TIMELINE ========== */
+    .timeline { display: flex; flex-direction: column; gap: 0; padding: 0.5rem 0.75rem; }
+
+    .tl-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      padding: 0.4rem 0;
+      position: relative;
+    }
+    .tl-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 7px; top: 20px;
+      width: 2px;
+      height: calc(100% - 4px);
+      background: var(--border);
+    }
+
+    .tl-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--card);
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .tl-dot.done   { border-color: var(--green); background: rgba(52,211,153,0.2); }
+    .tl-dot.active { border-color: var(--accent); background: rgba(56,189,248,0.2); animation: pulse 1.5s infinite; }
+    .tl-dot.idle   { border-color: var(--border); }
+
+    .tl-content { flex: 1; }
+    .tl-label { font-size: 0.78rem; font-weight: 600; line-height: 1.3; }
+    .tl-sub   { font-size: 0.7rem; color: var(--muted); }
+
+    /* ========== LIVE BADGE ========== */
+    .live-badge {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--green);
+    }
+    .live-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    /* ========== SCROLLBARS ========== */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ========== TOAST ========== */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      padding: 0.7rem 1.2rem;
+      background: var(--card);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--green);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      transform: translateY(30px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ping-badge {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔬</div>
+    <div class="logo-text">
+      <h1>The Researcher</h1>
+      <span>Live Visual Dashboard</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <input id="server-url-input" type="text" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000" title="Server URL" />
+    <div class="server-indicator">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text" style="color:var(--muted)">Connecting…</span>
+      <span class="ping-badge" id="ping-badge"></span>
+    </div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- STATS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📊</span> Live Stats</div>
+        <div class="live-badge">Live</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <div class="stat-value" id="stat-requests">0</div>
+          <div class="stat-label">Requests</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value" id="stat-success" style="color:var(--green)">0</div>
+          <div class="stat-label">Success</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value" id="stat-errors" style="color:var(--red)">0</div>
+          <div class="stat-label">Errors</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value" id="stat-avg-ms" style="color:var(--yellow)">—</div>
+          <div class="stat-label">Avg ms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIPELINE TIMELINE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">⚙️</span> Pipeline Stages</div>
+      </div>
+      <div class="timeline" id="pipeline-timeline">
+        <div class="tl-item">
+          <div class="tl-dot idle" id="tl-input"></div>
+          <div class="tl-content">
+            <div class="tl-label">Task Input</div>
+            <div class="tl-sub">Awaiting request</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot idle" id="tl-classify"></div>
+          <div class="tl-content">
+            <div class="tl-label">Domain Classifier</div>
+            <div class="tl-sub">Semantic affinity scoring</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot idle" id="tl-synthesize"></div>
+          <div class="tl-content">
+            <div class="tl-label">Knowledge Synthesis</div>
+            <div class="tl-sub">Brief generation</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot idle" id="tl-validate"></div>
+          <div class="tl-content">
+            <div class="tl-label">Schema Validation</div>
+            <div class="tl-sub">Output conformance check</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot idle" id="tl-deliver"></div>
+          <div class="tl-content">
+            <div class="tl-label">Brief Delivered</div>
+            <div class="tl-sub">JSON response sent</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOMAINS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🗂️</span> Domains</div>
+      </div>
+      <div class="domain-list" id="domain-list">
+        <div style="padding:0.5rem;color:var(--muted);font-size:0.78rem;">Loading…</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- QUERY SECTION -->
+    <div class="card query-section">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🔍</span> Research Query</div>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Task Description</label>
+            <textarea id="task-input" rows="2" placeholder="e.g. Build a real-time event streaming pipeline with schema validation…"></textarea>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Constraints (one per line)</label>
+            <textarea id="constraints-input" rows="2" placeholder="latency < 100ms&#10;throughput > 50k eps"></textarea>
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div style="margin-top:0.5rem;">
+          <label>Quick Presets</label>
+          <div class="preset-row">
+            <button class="preset-chip" onclick="applyPreset('frontend')">🎨 Responsive Dashboard</button>
+            <button class="preset-chip" onclick="applyPreset('backend')">⚙️ High-throughput API</button>
+            <button class="preset-chip" onclick="applyPreset('data_pipeline')">📦 Kafka Streaming Pipeline</button>
+            <button class="preset-chip" onclick="applyPreset('devops')">☁️ Kubernetes Deploy</button>
+            <button class="preset-chip" onclick="applyPreset('ai_ml')">🤖 ML Inference Service</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="research-btn" onclick="runResearch()">
+            <span>Run Research</span>
+          </button>
+          <button class="btn btn-ghost" onclick="clearBrief()">Clear</button>
+          <button class="btn btn-ghost" onclick="runHealthCheck()">Ping Server</button>
+          <div id="progress-text" style="font-size:0.78rem;color:var(--muted);margin-left:auto;"></div>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      </div>
+    </div>
+
+    <!-- BRIEF VIEWER -->
+    <div class="card brief-section">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📋</span> Research Brief</div>
+        <div id="brief-domain-tag"></div>
+      </div>
+      <div id="brief-body" style="padding:1rem;overflow-y:auto;height:calc(100% - 48px);">
+        <div class="brief-empty">
+          <div class="big-icon">🔬</div>
+          <div>Enter a task above and click <strong>Run Research</strong></div>
+          <div style="color:var(--border);font-size:0.75rem;">or try a quick preset</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ACTIVITY LOG -->
+  <aside class="log-panel">
+    <div class="log-header">
+      <div class="log-title"><span>📡</span> Activity Log</div>
+      <button class="btn btn-ghost" style="padding:0.2rem 0.6rem;font-size:0.7rem;" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="log-body" id="log-body"></div>
+  </aside>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+  // =====================================================
+  // STATE
+  // =====================================================
+  let stats = { requests: 0, success: 0, errors: 0, totalMs: 0 };
+  let serverUrl = () => document.getElementById('server-url-input').value.replace(/\/$/, '');
+
+  // =====================================================
+  // LOGGING
+  // =====================================================
+  function addLog(msg, type = 'info') {
+    const body = document.getElementById('log-body');
+    const entry = document.createElement('div');
+    entry.className = `log-entry log-${type}`;
+    const now = new Date();
+    const ts = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3,'0');
+    entry.innerHTML = `<span class="log-time">[${ts}]</span> ${msg}`;
+    body.appendChild(entry);
+    body.scrollTop = body.scrollHeight;
+    // Keep max 200 entries
+    while (body.children.length > 200) body.removeChild(body.firstChild);
+  }
+
+  function clearLog() {
+    document.getElementById('log-body').innerHTML = '';
+    addLog('Log cleared.', 'muted');
+  }
+
+  // =====================================================
+  // TOAST
+  // =====================================================
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // =====================================================
+  // STATS
+  // =====================================================
+  function updateStats(ms, success) {
+    stats.requests++;
+    if (success) stats.success++;
+    else stats.errors++;
+    stats.totalMs += ms;
+    document.getElementById('stat-requests').textContent = stats.requests;
+    document.getElementById('stat-success').textContent  = stats.success;
+    document.getElementById('stat-errors').textContent   = stats.errors;
+    const avg = stats.requests > 0 ? Math.round(stats.totalMs / stats.requests) : 0;
+    document.getElementById('stat-avg-ms').textContent   = avg + 'ms';
+  }
+
+  // =====================================================
+  // HEALTH CHECK (AUTO POLL)
+  // =====================================================
+  async function runHealthCheck() {
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const ping = document.getElementById('ping-badge');
+    const t0 = performance.now();
+    try {
+      const res  = await fetch(serverUrl() + '/api/health');
+      const ms   = Math.round(performance.now() - t0);
+      if (res.ok) {
+        const data = await res.json();
+        dot.className  = 'status-dot online';
+        text.textContent = data.service || 'Online';
+        text.style.color = 'var(--green)';
+        ping.textContent = ms + 'ms';
+        addLog(`✅ Health OK — ${data.service} v${data.version} (${ms}ms)`, 'success');
+      } else {
+        throw new Error('HTTP ' + res.status);
+      }
+    } catch(e) {
+      dot.className  = 'status-dot offline';
+      text.textContent = 'Offline';
+      text.style.color = 'var(--red)';
+      ping.textContent = '';
+      addLog(`❌ Health check failed: ${e.message}`, 'error');
+    }
+  }
+
+  // Poll every 5s
+  runHealthCheck();
+  setInterval(runHealthCheck, 5000);
+
+  // =====================================================
+  // DOMAINS
+  // =====================================================
+  const DOMAIN_COLORS = {
+    frontend: '#818cf8', backend: '#34d399',
+    data_pipeline: '#fbbf24', devops_cloud: '#f87171', ai_ml: '#c084fc'
+  };
+  const DOMAIN_ICONS = {
+    frontend: '🎨', backend: '⚙️',
+    data_pipeline: '📦', devops_cloud: '☁️', ai_ml: '🤖'
+  };
+
+  async function loadDomains() {
+    try {
+      const res  = await fetch(serverUrl() + '/api/domains');
+      const data = await res.json();
+      const list = document.getElementById('domain-list');
+      list.innerHTML = '';
+      const domains = data.domains || Object.keys(data);
+      domains.forEach(d => {
+        const btn = document.createElement('div');
+        btn.className = 'domain-badge';
+        btn.id = 'domain-' + d;
+        btn.innerHTML = `
+          <div class="domain-dot" style="background:${DOMAIN_COLORS[d] || '#64748b'}"></div>
+          <span>${DOMAIN_ICONS[d] || '📌'} ${d.replace(/_/g,' ')}</span>
+        `;
+        btn.onclick = () => { applyPreset(d); };
+        list.appendChild(btn);
+      });
+      addLog(`📂 Loaded ${domains.length} knowledge domains`, 'info');
+    } catch(e) {
+      addLog('⚠️ Could not load domains: ' + e.message, 'warn');
+    }
+  }
+
+  loadDomains();
+
+  // =====================================================
+  // PIPELINE ANIMATION
+  // =====================================================
+  const TL_IDS = ['tl-input','tl-classify','tl-synthesize','tl-validate','tl-deliver'];
+
+  function resetTimeline() {
+    TL_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = 'tl-dot idle';
+    });
+  }
+
+  function animatePipeline(doneCallback) {
+    resetTimeline();
+    let i = 0;
+    const steps = TL_IDS;
+    const delays = [0, 300, 500, 800, 1000];
+
+    steps.forEach((id, idx) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.className = 'tl-dot active';
+        // Mark previous done
+        if (idx > 0) {
+          const prev = document.getElementById(steps[idx-1]);
+          if (prev) prev.className = 'tl-dot done';
+        }
+        if (idx === steps.length - 1) {
+          setTimeout(() => {
+            el.className = 'tl-dot done';
+            if (doneCallback) doneCallback();
+          }, 400);
+        }
+      }, delays[idx]);
+    });
+  }
+
+  // =====================================================
+  // PROGRESS BAR
+  // =====================================================
+  function setProgress(pct, msg = '') {
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = msg;
+  }
+
+  // =====================================================
+  // PRESETS
+  // =====================================================
+  const PRESETS = {
+    frontend: {
+      task: 'Build a responsive analytics dashboard with real-time charts, dark mode toggle, and state management',
+      constraints: 'bundle size < 200kb\naccessibility WCAG 2.1 AA\nmobile-first responsive'
+    },
+    backend: {
+      task: 'Build a high-throughput REST API with JWT authentication, connection pooling, and rate limiting',
+      constraints: 'throughput > 10000 rps\nlatency p99 < 50ms\ncontainerized deployment'
+    },
+    data_pipeline: {
+      task: 'Build a real-time streaming pipeline ingesting 50k events/sec with schema validation and deduplication',
+      constraints: 'throughput > 50000 eps\nlatency < 100ms\ndistributed clustering\noffset-based replay'
+    },
+    devops: {
+      task: 'Deploy a microservices application on Kubernetes with autoscaling, blue-green deployments and observability',
+      constraints: 'zero-downtime deployments\ncost-optimised autoscaling\nmulti-region failover'
+    },
+    ai_ml: {
+      task: 'Deploy a low-latency ML inference service for text classification with model versioning and A/B testing',
+      constraints: 'inference latency < 20ms\nthroughput > 500 rps\nGPU optional\nmodel versioning'
+    }
+  };
+
+  function applyPreset(name) {
+    const p = PRESETS[name] || PRESETS['backend'];
+    document.getElementById('task-input').value        = p.task;
+    document.getElementById('constraints-input').value = p.constraints;
+    // Highlight the matching domain badge
+    document.querySelectorAll('.domain-badge').forEach(b => b.classList.remove('active'));
+    const target = document.getElementById('domain-' + name) ||
+                   document.getElementById('domain-' + name + '_cloud');
+    if (target) target.classList.add('active');
+    addLog(`📌 Preset loaded: ${name}`, 'muted');
+  }
+
+  // =====================================================
+  // MAIN RESEARCH CALL
+  // =====================================================
+  async function runResearch() {
+    const task        = document.getElementById('task-input').value.trim();
+    const rawCons     = document.getElementById('constraints-input').value.trim();
+    const constraints = rawCons ? rawCons.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+    if (!task) {
+      addLog('⚠️ Please enter a task description', 'warn');
+      showToast('⚠️ Task is required');
+      return;
+    }
+
+    const btn = document.getElementById('research-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span><span>Researching…</span>';
+
+    addLog(`🚀 POST /api/research — task: "${task.slice(0,50)}…"`, 'info');
+    if (constraints.length) addLog(`   Constraints: ${constraints.join(' | ')}`, 'muted');
+
+    setProgress(10, 'Sending request…');
+    animatePipeline(null);
+
+    const t0 = performance.now();
+    try {
+      setProgress(25, 'Classifying domain…');
+      const res  = await fetch(serverUrl() + '/api/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, constraints })
+      });
+      const ms   = Math.round(performance.now() - t0);
+      setProgress(70, 'Validating schema…');
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(`HTTP ${res.status}: ${err.detail || err.error || 'Unknown error'}`);
+      }
+
+      const data = await res.json();
+      setProgress(100, `Done in ${ms}ms`);
+      updateStats(ms, true);
+      addLog(`✅ Brief received — domain: ${data.domain} (${ms}ms)`, 'success');
+      renderBrief(data, ms);
+      showToast('✅ Brief generated!');
+
+      // Reset progress
+      setTimeout(() => setProgress(0, ''), 1500);
+
+    } catch(e) {
+      const ms = Math.round(performance.now() - t0);
+      setProgress(0, '');
+      updateStats(ms, false);
+      addLog(`❌ Request failed: ${e.message}`, 'error');
+      showErrorBrief(e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Run Research</span>';
+    }
+  }
+
+  // =====================================================
+  // RENDER BRIEF
+  // =====================================================
+  function renderBrief(data, ms) {
+    const body = document.getElementById('brief-body');
+    const tag  = document.getElementById('brief-domain-tag');
+
+    const color = DOMAIN_COLORS[data.domain] || '#64748b';
+    const icon  = DOMAIN_ICONS[data.domain]  || '📌';
+
+    tag.innerHTML = `<div class="domain-pill">${icon} ${(data.domain||'').replace(/_/g,' ')} · ${ms}ms</div>`;
+
+    // Approach
+    const appr  = data.recommended_approach || {};
+    const steps = (appr.steps || []).map((s,i) =>
+      `<li><span class="step-num">${i+1}</span><span>${s}</span></li>`).join('');
+
+    // Libraries
+    const libs  = (data.recommended_libraries || []).map(l =>
+      `<div class="lib-item">
+         <span class="lib-name">${l.name}</span>
+         <span class="lib-ver">${l.version || ''}</span>
+         <span class="lib-desc">${l.purpose || ''}</span>
+       </div>`).join('');
+
+    // Docs
+    const docs  = (data.documentation_links || []).map(d =>
+      `<a class="doc-link" href="${d.url}" target="_blank" rel="noopener">
+         🔗 <span>${d.title}</span>
+       </a>`).join('');
+
+    // Pitfalls
+    const pitf  = (data.pitfalls || []).map(p =>
+      `<div class="pitfall-item">
+         <div class="risk">⚠ ${p.risk}</div>
+         <div class="mitigation">→ ${p.mitigation}</div>
+       </div>`).join('');
+
+    body.innerHTML = `
+      <div class="brief-grid">
+        <div class="brief-card brief-card-full">
+          <h3>💡 Recommended Approach</h3>
+          <div class="approach-summary">${appr.summary || ''}</div>
+          <ul class="step-list">${steps}</ul>
+          ${appr.trade_offs ? `<div style="margin-top:0.6rem;padding:0.5rem 0.75rem;border-radius:6px;background:rgba(251,191,36,0.07);border-left:3px solid var(--yellow);font-size:0.78rem;color:var(--muted)">⚖️ ${appr.trade_offs}</div>` : ''}
+        </div>
+
+        <div class="brief-card">
+          <h3>📦 Libraries &amp; Versions</h3>
+          ${libs || '<div style="color:var(--muted);font-size:0.8rem">None listed</div>'}
+        </div>
+
+        <div class="brief-card">
+          <h3>📎 Documentation Links</h3>
+          ${docs || '<div style="color:var(--muted);font-size:0.8rem">None listed</div>'}
+        </div>
+
+        <div class="brief-card brief-card-full">
+          <h3>⚠️ Pitfalls &amp; Gotchas</h3>
+          ${pitf || '<div style="color:var(--muted);font-size:0.8rem">No pitfalls listed</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  function showErrorBrief(msg) {
+    document.getElementById('brief-body').innerHTML = `
+      <div style="padding:1.5rem;border-radius:10px;background:rgba(248,113,113,0.07);border:1px solid var(--red);color:var(--red)">
+        <div style="font-weight:700;margin-bottom:0.4rem">❌ Request Failed</div>
+        <div style="font-size:0.82rem;font-family:var(--mono)">${msg}</div>
+      </div>
+    `;
+    document.getElementById('brief-domain-tag').innerHTML = '';
+  }
+
+  function clearBrief() {
+    document.getElementById('brief-body').innerHTML = `
+      <div class="brief-empty">
+        <div class="big-icon">🔬</div>
+        <div>Enter a task above and click <strong>Run Research</strong></div>
+        <div style="color:var(--border);font-size:0.75rem">or try a quick preset</div>
+      </div>`;
+    document.getElementById('brief-domain-tag').innerHTML = '';
+    document.getElementById('task-input').value = '';
+    document.getElementById('constraints-input').value = '';
+    setProgress(0,'');
+    resetTimeline();
+    document.querySelectorAll('.domain-badge').forEach(b => b.classList.remove('active'));
+    addLog('🗑️ Brief cleared', 'muted');
+  }
+
+  // =====================================================
+  // KEYBOARD SHORTCUT: Ctrl+Enter to submit
+  // =====================================================
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runResearch();
+    }
+  });
+
+  // Allow server URL change to re-check health
+  document.getElementById('server-url-input').addEventListener('change', () => {
+    runHealthCheck();
+    loadDomains();
+  });
+
+  addLog('👋 Dashboard initialised. Connecting to server…', 'info');
+</script>
+</body>
+</html>
